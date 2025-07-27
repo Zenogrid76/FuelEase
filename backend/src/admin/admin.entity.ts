@@ -9,6 +9,7 @@ export class Admin {
   name: string;
 
   @Column()
+  @Column({ select: false }) // Exclude from select queries
   password: string;
 
   @Column({ nullable: true })
@@ -18,11 +19,11 @@ export class Admin {
   email: string;
 
   @Column({ unique: true })
-  nidNumber: string;
+  nidNumber: number;
 
   @Column({ nullable: true })
   nidImage?: string; 
 
   @Column()
-  phoneNo: string;
+  phoneNo: number;
 }
