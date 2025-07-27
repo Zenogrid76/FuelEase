@@ -59,5 +59,5 @@ export class CustomerController {
   @Delete(':id')
   async deleteCustomer(@Param('id') id: number) {
     return this.customerService.deleteCustomer(id);
-  }
+  } 
 }
