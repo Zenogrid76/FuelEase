@@ -1,15 +1,14 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-@Entity('admins') 
+@Entity('admins')
 export class Admin {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'int', unsigned: true })
   id: number;
 
-  @Column()
-  name: string;
+  @Column({ type: 'varchar', length: 100 })
+  fullName: string;
 
-  @Column()
-  @Column({ select: false }) // Exclude from select queries
+  @Column({ select: false })
   password: string;
 
   @Column({ nullable: true })
@@ -18,12 +17,22 @@ export class Admin {
   @Column({ unique: true })
   email: string;
 
-  @Column({ unique: true })
-  nidNumber: number;
+  @Column({ unique: true, length: 10 })
+  nidNumber: string;
 
   @Column({ nullable: true })
-  nidImage?: string; 
+  nidImage?: string;
 
-  @Column()
-  phoneNo: number;
+  @Column({ type: 'int', unsigned: true })
+  age: number;
+
+  @Column({
+    type: 'enum',
+    enum: ['actve', 'inactve'],
+    default: 'actve'
+  })
+  status: 'actve' | 'inactve';
+
+  @Column({ unique: true, length: 11 })
+  phoneNo: string;
 }

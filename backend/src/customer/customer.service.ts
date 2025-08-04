@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ILike, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Customer } from './customer.entity';
 import { CustomerDto } from './dtos/customer.dto';
 
@@ -8,28 +8,34 @@ import { CustomerDto } from './dtos/customer.dto';
 export class CustomerService {
   constructor(
     @InjectRepository(Customer)
-    private readonly customerRepo: Repository<Customer>,
+    private readonly customerRepository: Repository<Customer>,
   ) {}
 
-  async createCustomer(dto: CustomerDto): Promise<Customer> {
-    const customer = this.customerRepo.create(dto);
-    return this.customerRepo.save(customer);
+  async createCustomer(createCustomerDto: CustomerDto): Promise<Customer> {
+    const customer = this.customerRepository.create(createCustomerDto);
+    return this.customerRepository.save(customer);
   }
 
-  async updatePdfFile(id: number, filePath: string): Promise<Customer> {
-    const customer = await this.customerRepo.findOne({ where: { id } });
+  async findByUsername(username: string): Promise<Customer> {
+    const customer = await this.customerRepository.findOneBy({ username });
     if (!customer) {
-      throw new NotFoundException('Customer not found');
+      throw new NotFoundException(
+        `Customer with username ${username} not found`,
+      );
     }
-    customer.pdfFile = filePath;
-    return this.customerRepo.save(customer);
+    return customer;
   }
 
-  async deleteCustomer(id: number): Promise<{ message: string }> {
-    const result = await this.customerRepo.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException('Customer not found');
-    }
-    return { message: 'Customer deleted successfully' };
+  async findByFullNameContains(substring: string): Promise<Customer[]> {
+    return this.customerRepository.find({
+      where: {
+        fullName: ILike(`%${substring}%`),
+      },
+    });
+  }
+
+  async removeByUsername(username: string): Promise<{ deleted: boolean }> {
+    const result = await this.customerRepository.delete({ username });
+    return { deleted: !!result.affected };
   }
 }

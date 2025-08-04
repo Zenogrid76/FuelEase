@@ -1,47 +1,46 @@
 import {
-    IsString,
-    MinLength,
-    IsOptional,
-    IsEmail,
-    Matches,
-    IsNotEmpty,
-    IsNumberString,
-    IsMimeType,
+  IsString,
+  MinLength,
+  IsOptional,
+  IsEmail,
+  Matches,
+  IsNotEmpty,
 } from 'class-validator';
 
 export class AdminDto {
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^[A-Za-z\s]+$/, { message: 'Name must contain only alphabets and spaces' })
+  fullName: string;
 
-    @IsNotEmpty()
-    @IsString()
-    @Matches(/^[A-Za-z\s]+$/, { message: 'Name must contain only alphabets and spaces' })
-    name: string;
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(6)
+  password: string;
 
-    @IsNotEmpty()
-    @IsString()
-    @MinLength(6)
-    password: string;
+  @IsOptional()
+  @IsString()
+  profileImage?: string;
 
-    @IsOptional()
-    @IsString()
-    profileImage?: string;
+  @IsNotEmpty()
+  @IsEmail({}, { message: 'Invalid email format' })
+  @Matches(/@.*\.xyz$/, { message: 'Email must contain "@" and end with .xyz' })
+  email: string;
 
-    @IsNotEmpty()
-    @IsEmail({}, { message: 'Invalid email format' })
-    @Matches(/\.xyz$/, { message: 'Email must end with .xyz' })
-    email: string;
-
-
-    @IsNotEmpty()
-    @IsNumberString()
-    @Matches(/^[0-9]{10}$/, { message: 'NID must be exactly 10 digits' })
-    nidNumber: number;
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^[0-9]{10}$/, { message: 'NID must be exactly 10 digits' })
+  nidNumber: string;
 
 
-    @IsOptional()
-    @IsMimeType({ message: 'NID image must be a valid image file' })
-    nidImage?: any;
+  @IsOptional()
+  nidImage?: any;
 
-    @IsNumberString()
-    @Matches(/^[0-9]{11}$/, { message: 'Phone number must be exactly 11 digits' })
-    phoneNo: number;
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^[0-9]{11}$/, { message: 'Phone number must be exactly 11 digits' })
+  phoneNo: string;
+  
+  @IsOptional()
+  age?: number;
 }

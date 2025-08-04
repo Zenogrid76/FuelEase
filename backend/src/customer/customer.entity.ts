@@ -1,22 +1,21 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, Column, PrimaryColumn, BeforeInsert } from 'typeorm';
 
 @Entity('customers')
 export class Customer {
-  @PrimaryGeneratedColumn()
+  @PrimaryColumn()
   id: number;
 
-  @Column()
-  name: string;
+  @Column({ type: 'varchar', length: 100, unique: true })
+  username: string;
 
-  @Column({ select: false })
-  password: string;
+  @Column({ type: 'varchar', length: 150 })
+  fullName: string;
 
-  @Column({ nullable: true })
-  pdfFile?: string;
+  @Column({ type: 'boolean', default: false })
+  isActve: boolean;
 
-  @Column({ unique: true })
-  email: string;
-
-  @Column()
-  phoneNo: string;
+  @BeforeInsert()
+  generateId() {
+    this.id =  Math.round(Math.random() * 1e5);
+  }
 }

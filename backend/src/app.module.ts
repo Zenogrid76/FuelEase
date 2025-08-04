@@ -10,7 +10,7 @@ import { CustomerModule } from './customer/customer.module';
     host: 'localhost',
     port: 5432,
     username: 'postgres',
-    password: '1234',
+    password: 'password',
     database: 'FuelEase',
      synchronize: true,
       autoLoadEntities: true,}),
