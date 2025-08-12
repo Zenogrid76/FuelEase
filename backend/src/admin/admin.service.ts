@@ -4,53 +4,45 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import { Admin } from './admin.entity';
 import { AdminDto } from './dtos/admin.dto';
 import { QueryFailedError } from 'typeorm/error/QueryFailedError';
+import * as bcrypt from 'bcrypt';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class AdminService {
   constructor(
     @InjectRepository(Admin)
     private readonly adminRepository: Repository<Admin>,
+    private readonly mailerService: MailerService,
   ) {}
 
-  // Create a user
-  async createAdmin(adminDto: AdminDto): Promise<Admin> {
+async createAdmin(adminDto: AdminDto) {
+    const saltOrRounds = 10;
+    const hash = await bcrypt.hash(adminDto.password, saltOrRounds);
 
-    const newAdmin = this.adminRepository.create(adminDto);
+    const newAdmin = this.adminRepository.create({
+      ...adminDto,
+      password: hash, // store hashed password instead of plain
+    });
 
-    try {
-      return await this.adminRepository.save(newAdmin);
-    } catch (error) {
-      if (
-        error instanceof QueryFailedError &&
-        error.driverError?.code === '23505'
-      ) {
-        const detail = error.driverError.detail?.toLowerCase() ?? '';
-        if (detail.includes('phoneNo'.toLowerCase())) {
-          throw new BadRequestException('Phone number already exists.');
-        }
-        if (detail.includes('nidNumber'.toLowerCase())) {
-          throw new BadRequestException('NID number already exists.');
-        }
-        if (detail.includes('email'.toLowerCase())) {
-          throw new BadRequestException('Email already exists.');
-        }
-        throw new BadRequestException(
-          'Duplicate entry violates unique constraint.',
-        );
-      }
-      throw error;
-    }
+    return this.adminRepository.save(newAdmin);
   }
 
+  async updateAdmin(admin: Admin): Promise<Admin> {
+  return this.adminRepository.save(admin);
+}
+
   // Change the status of a user
-  async updateStatus(id: number, status: 'actve' | 'inactve'): Promise<Admin> {
-    if (status !== 'actve' && status !== 'inactve') {
+  async updateStatus(
+    id: number,
+    status: 'active' | 'inactive',
+  ): Promise<Admin> {
+    if (status !== 'active' && status !== 'inactive') {
       throw new BadRequestException(
-        'Status must be either "actve" or "inactve"',
+        'Status must be either "active" or "inactive"',
       );
     }
     const admin = await this.adminRepository.findOneBy({ id });
@@ -61,17 +53,18 @@ export class AdminService {
 
   // Retrieve a list of users based on their 'inactve' status
   async findInactiveUsers(): Promise<Admin[]> {
-    return this.adminRepository.find({ where: { status: 'inactve' } });
+    return this.adminRepository.find({ where: { status: 'inactive' } });
   }
 
-  // Get a list of users older than 40
   // Get a list of users older than a given age
   async findUsersOlderThan(age: number): Promise<Admin[]> {
-    return this.adminRepository
-      .createQueryBuilder('admin')
-      .where('admin.age > :age', { age })
-      .getMany();
+    return this.adminRepository.find({
+      where: {
+        age: MoreThan(age),
+      },
+    });
   }
+
 
   // Update profile image and NID image
   async updateProfileImage(id: number, filePath: string): Promise<Admin> {
@@ -96,13 +89,17 @@ export class AdminService {
   }
 
   // Find admin by email or ID
-  async findByEmail(email: string): Promise<Admin> {
-    const admin = await this.adminRepository.findOneBy({ email });
-    if (!admin) {
-      throw new NotFoundException('Admin not found');
-    }
-    return admin;
+async findByEmail(email: string): Promise<Admin> {
+  const admin = await this.adminRepository.findOne({
+    where: { email },
+    select: ['id', 'email', 'password', 'role'],
+  });
+  if (!admin) {
+    throw new NotFoundException('Admin not found');
   }
+  return admin;
+}
+
 
   // Find admin by ID
   async findById(id: number): Promise<Admin> {
@@ -112,4 +109,39 @@ export class AdminService {
     }
     return admin;
   }
+
+  async enableTwoFactor(adminId: number, emailForOtp: string): Promise<{ message: string }> {
+    const admin = await this.findById(adminId);
+    if (!admin) throw new BadRequestException('Admin not found');
+
+    // Generate 6-digit OTP code
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Set OTP and expiration (e.g., 10 minutes from now)
+    admin.twoFactorOtp = otpCode;
+    admin.twoFactorOtpExpiration = new Date(Date.now() + 10 * 60 * 1000);
+    admin.isTwoFactorEnabled = true; // mark 2FA enabled
+
+    await this.adminRepository.save(admin);
+
+    // Send OTP code to the provided email (not necessarily admin.email)
+    await this.mailerService.sendMail({
+      to: emailForOtp,
+      subject: 'Your 2FA Setup Code',
+      text: `Your two-factor authentication setup code is ${otpCode}`,
+      html: `<b>Your two-factor authentication setup code is: ${otpCode}</b>`,
+    });
+
+    return { message: '2FA code sent to the provided email' };
+  }
+
+  async sendTwoFactorCodeEmail(to: string, otpCode: string): Promise<void> {
+  await this.mailerService.sendMail({
+    to,
+    subject: 'Your 2FA Login Code',
+    text: `Your two-factor authentication code is ${otpCode}`,
+    html: `<b>Your two-factor authentication code is: ${otpCode}</b>`,
+  });
+}
+
 }

@@ -1,9 +1,10 @@
 import {
-  Controller,
-  Post,
   Body,
-  Param,
+  Controller,
   Get,
+  HttpStatus,
+  Param,
+  Post,
   Put,
   Delete,
   UseInterceptors,
@@ -13,27 +14,34 @@ import {
   UsePipes,
   ValidationPipe,
   Patch,
+  UseGuards,
+  UnauthorizedException,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AdminService } from './admin.service';
 import { AdminDto } from './dtos/admin.dto';
+import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+  // Create a new admin (only if logged in)
   //localhost:3000/admin/create
+  //@UseGuards(AuthGuard)
   @Post('create')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async createAdmin(@Body() createAdminDto: AdminDto) {
     return this.adminService.createAdmin(createAdminDto);
   }
 
-  //  Upload/update profile image
-  //localhost:3000/admin/profile-image/:id
-  @Put('profile-image/:id')
+  // Upload/update profile image (own account only)
+  //localhost:3000/admin/profile-image
+  @UseGuards(AuthGuard)
+  @Put('profile-image')
   @UseInterceptors(
     FileInterceptor('profileImage', {
       storage: diskStorage({
@@ -52,18 +60,21 @@ export class AdminController {
     }),
   )
   async uploadProfileImage(
-    @Param('id') id: number,
     @UploadedFile() profileImage: Express.Multer.File,
+    @Request() req: any,
   ) {
     if (!profileImage) {
       throw new BadRequestException('Profile image file must be provided');
     }
-    return this.adminService.updateProfileImage(id, profileImage.path);
+
+    const adminId = Number(req.user.sub);
+    return this.adminService.updateProfileImage(adminId, profileImage.path);
   }
 
-  // 3. Upload/update NID image
-  //localhost:3000/admin/nid-image/:id
-  @Put('nid-image/:id')
+  // Upload/update NID image (own account only)
+  //localhost:3000/admin/nid-image
+  @UseGuards(AuthGuard)
+  @Put('nid-image')
   @UseInterceptors(
     FileInterceptor('nidImage', {
       storage: diskStorage({
@@ -83,39 +94,29 @@ export class AdminController {
     }),
   )
   async uploadNidImage(
-    @Param('id') id: number,
     @UploadedFile() nidImage: Express.Multer.File,
+    @Request() req: any,
   ) {
     if (!nidImage) {
       throw new BadRequestException('NID image file must be provided');
     }
-    return this.adminService.updateNidImage(id, nidImage.path);
+
+    const adminId = Number(req.user.sub);
+    return this.adminService.updateNidImage(adminId, nidImage.path);
   }
 
-  // 4. Delete admin by ID
-  //localhost:3000/admin/:id
-  @Delete('delete/:id')
-  async deleteAdmin(@Param('id') id: number) {
-    return this.adminService.deleteAdmin(id);
+  // Delete admin (only your own account)
+  //localhost:3000/admin/delete
+  @UseGuards(AuthGuard)
+  @Delete('delete')
+  async deleteAdmin(@Request() req: any) {
+    const adminId = Number(req.user.sub);
+    return this.adminService.deleteAdmin(adminId);
   }
 
-  // 5. Find admin by email
-  //localhost:3000/admin/login
-  @Post('login')
-  async login(@Body() body: { email: string; pass: string }) {
-    const { email, pass } = body;
-    const admin = await this.adminService.findByEmail(email);
-    if (!admin) {
-      throw new BadRequestException('Invalid email');
-    }
-    if (admin.password !== pass) {
-      throw new BadRequestException('Invalid password');
-    }
-    return admin;
-  }
-
-  // 6. Get admin profile image by ID
+  // Get admin profile image (requires login)
   //localhost:3000/admin/profile-image/:id
+  @UseGuards(AuthGuard)
   @Get('profile-image/:id')
   async getProfileImage(@Param('id', ParseIntPipe) id: number) {
     const admin = await this.adminService.findById(id);
@@ -123,39 +124,56 @@ export class AdminController {
     return { profileImage: admin.profileImage };
   }
 
-  // 7. Change the status of a user to 'actve' or 'inactve'
-  // localhost:3000/admin/status/:id
+  // Change the status of a user (requires login
+  //localhost:3000/admin/status/:id)
+  @UseGuards(AuthGuard)
   @Patch('status/:id')
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
-    @Body('status') status: 'actve' | 'inactve',
+    @Body('status') status: 'active' | 'inactive',
   ) {
-    if (status !== 'actve' && status !== 'inactve') {
+    if (status !== 'active' && status !== 'inactive') {
       throw new BadRequestException(
-        'Status must be either "actve" or "inactve"',
+        'Status must be either "active" or "inactive"',
       );
     }
     return this.adminService.updateStatus(id, status);
   }
 
-  // 8. Retrieve a list of users with 'inactve' status
-  // localhost:3000/admin/inactive
+  // Get all inactive admins (requires login)
+  //localhost:3000/admin/inactive
+  @UseGuards(AuthGuard)
   @Get('inactive')
   async getInactiveAdmins() {
     return this.adminService.findInactiveUsers();
   }
 
-  // localhost:3000/admin/older-than/:age 
-@Get('older-than/:age')
-async getAdminsOlderThan(@Param('age') age: string) {
+  // Get admins older than (requires login)
+  //localhost:3000/admin/older-than/:age
+  @UseGuards(AuthGuard)
+  @Get('older-than/:age')
+  async getAdminsOlderThan(@Param('age') age: string) {
+    const ageNum = parseInt(age, 10);
 
-  const ageNum = parseInt(age, 10) ;
+    if (isNaN(ageNum) || ageNum < 0) {
+      throw new BadRequestException('Age must be a positive number');
+    }
 
-  if (isNaN(ageNum) || ageNum < 0) {
-    throw new BadRequestException('Age must be a positive number');
+    return this.adminService.findUsersOlderThan(ageNum);
   }
 
-  return this.adminService.findUsersOlderThan(ageNum);
-}
+    @UseGuards(AuthGuard)
+  @Post('enable-2fa')
+  async enableTwoFactor(
+    @Request() req: any,
+    @Body('emailForOtp') emailForOtp: string,
+  ) {
+    if (!emailForOtp) {
+      throw new BadRequestException('Email for OTP is required');
+    }
+
+    const adminId = req.user.sub; // from JWT
+    return this.adminService.enableTwoFactor(adminId, emailForOtp);
+  }
 
 }

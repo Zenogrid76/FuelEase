@@ -38,4 +38,16 @@ export class CustomerService {
     const result = await this.customerRepository.delete({ username });
     return { deleted: !!result.affected };
   }
+
+    // Make isActive true for a given customer id
+  async activateCustomer(id: number): Promise<Customer> {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw new NotFoundException(`Customer with id ${id} not found`);
+    }
+
+    customer.isActive = true; 
+    return this.customerRepository.save(customer);
+  }
 }

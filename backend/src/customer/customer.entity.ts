@@ -12,7 +12,7 @@ export class Customer {
   fullName: string;
 
   @Column({ type: 'boolean', default: false })
-  isActve: boolean;
+  isActive: boolean;
 
   @BeforeInsert()
   generateId() {

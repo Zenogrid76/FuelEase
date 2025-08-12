@@ -5,6 +5,8 @@ import {
   IsEmail,
   Matches,
   IsNotEmpty,
+  IsPositive,
+  Length,
 } from 'class-validator';
 
 export class AdminDto {
@@ -40,7 +42,8 @@ export class AdminDto {
   @IsString()
   @Matches(/^[0-9]{11}$/, { message: 'Phone number must be exactly 11 digits' })
   phoneNo: string;
-  
+
+  @IsPositive({ message: 'Age must be a positive number' })
   @IsOptional()
   age?: number;
 }

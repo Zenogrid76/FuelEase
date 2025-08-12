@@ -7,6 +7,8 @@ import {
   Delete,
   UsePipes,
   ValidationPipe,
+  Patch,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CustomerService } from './customer.service';
 import { CustomerDto } from './dtos/customer.dto';
@@ -38,5 +40,12 @@ export class CustomerController {
   @Delete('username/:username')
   async deleteCustomerByUsername(@Param('username') username: string) {
     return this.customerService.removeByUsername(username);
+  }
+
+  
+  // localhost:3000/customers/activate/:id
+  @Patch('activate/:id')
+  async activateCustomer(@Param('id', ParseIntPipe) id: number) {
+    return this.customerService.activateCustomer(id);
   }
 }
