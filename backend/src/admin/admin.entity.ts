@@ -11,7 +11,7 @@ export class Admin {
   @Column({ select: false })
   password: string;
 
-  @Column({ nullable: true,  })
+  @Column({ nullable: true })
   profileImage?: string;
 
   @Column({ unique: true })
@@ -29,7 +29,7 @@ export class Admin {
   @Column({
     type: 'enum',
     enum: ['active', 'inactive'],
-    default: 'active'
+    default: 'active',
   })
   status: 'active' | 'inactive';
 
@@ -37,20 +37,17 @@ export class Admin {
   phoneNo: string;
 
   @Column({ default: 'admin' })
-  role: string ; 
+  role: string;
 
   @Column({ default: false })
-isTwoFactorEnabled: boolean;
+  isTwoFactorEnabled: boolean;
 
-@Column({ nullable: true })
-twoFactorEmail?: string | null;
+  @Column({ type: 'varchar', nullable: true })
+  twoFactorEmail?: string | null;
 
+  @Column({ nullable: true })
+  twoFactorOtp?: string;
 
-@Column({ nullable: true })
-twoFactorOtp?: string;
-
-@Column({ type: 'timestamp', nullable: true })
-twoFactorOtpExpiration?: Date;
-
-
+  @Column({ type: 'timestamp', nullable: true })
+  twoFactorOtpExpiration?: Date;
 }

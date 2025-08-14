@@ -162,7 +162,9 @@ export class AdminController {
     return this.adminService.findUsersOlderThan(ageNum);
   }
 
-    @UseGuards(AuthGuard)
+  // Enable two-factor authentication (requires login)
+  //localhost:3000/admin/enable-2fa
+  @UseGuards(AuthGuard)
   @Post('enable-2fa')
   async enableTwoFactor(
     @Request() req: any,
@@ -172,8 +174,25 @@ export class AdminController {
       throw new BadRequestException('Email for OTP is required');
     }
 
-    const adminId = req.user.sub; // from JWT
+    const adminId = req.user.sub;
     return this.adminService.enableTwoFactor(adminId, emailForOtp);
   }
 
+
+// Verify two-factor authentication setup (requires login)
+    @UseGuards(AuthGuard)
+  @Post('verify-2fa-setup')
+  async verifyTwoFactorSetup(
+    @Request() req: any,
+    @Body('code') code: string,
+  ) {
+    const adminId = req.user.sub;
+    if (!code) {
+      throw new BadRequestException('OTP code is required');
+    }
+    return this.adminService.verifyTwoFactorSetup(adminId, code);
+
+    
+  }
 }
+

@@ -19,7 +19,7 @@ export class AdminService {
     private readonly mailerService: MailerService,
   ) {}
 
-async createAdmin(adminDto: AdminDto) {
+  async createAdmin(adminDto: AdminDto) {
     const saltOrRounds = 10;
     const hash = await bcrypt.hash(adminDto.password, saltOrRounds);
 
@@ -32,8 +32,8 @@ async createAdmin(adminDto: AdminDto) {
   }
 
   async updateAdmin(admin: Admin): Promise<Admin> {
-  return this.adminRepository.save(admin);
-}
+    return this.adminRepository.save(admin);
+  }
 
   // Change the status of a user
   async updateStatus(
@@ -65,7 +65,6 @@ async createAdmin(adminDto: AdminDto) {
     });
   }
 
-
   // Update profile image and NID image
   async updateProfileImage(id: number, filePath: string): Promise<Admin> {
     const admin = await this.adminRepository.findOneBy({ id });
@@ -89,17 +88,16 @@ async createAdmin(adminDto: AdminDto) {
   }
 
   // Find admin by email or ID
-async findByEmail(email: string): Promise<Admin> {
-  const admin = await this.adminRepository.findOne({
-    where: { email },
-    select: ['id', 'email', 'password', 'role'],
-  });
-  if (!admin) {
-    throw new NotFoundException('Admin not found');
+  async findByEmail(email: string): Promise<Admin> {
+    const admin = await this.adminRepository.findOne({
+      where: { email },
+      select: ['id', 'email', 'password', 'role','isTwoFactorEnabled', 'twoFactorOtp', 'twoFactorOtpExpiration', 'twoFactorEmail'],
+    });
+    if (!admin) {
+      throw new NotFoundException('Admin not found');
+    }
+    return admin;
   }
-  return admin;
-}
-
 
   // Find admin by ID
   async findById(id: number): Promise<Admin> {
@@ -110,38 +108,75 @@ async findByEmail(email: string): Promise<Admin> {
     return admin;
   }
 
-  async enableTwoFactor(adminId: number, emailForOtp: string): Promise<{ message: string }> {
+  
+// Enable two-factor authentication for an admin
+async enableTwoFactor(
+  adminId: number,
+  emailForOtp: string,
+): Promise<{ message: string }> {
+  const admin = await this.findById(adminId);
+  if (!admin) throw new BadRequestException('Admin not found');
+
+  // Save the OTP email in the database
+  admin.twoFactorEmail = emailForOtp;
+
+  // Generate 6-digit OTP code
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Set OTP and expiration (e.g., 10 minutes from now)
+  admin.twoFactorOtp = otpCode;
+  admin.twoFactorOtpExpiration = new Date(Date.now() + 10 * 60 * 1000);
+
+  // Mark 2FA as pending activation (you could keep false until verified)
+  admin.isTwoFactorEnabled = false; // safer to set true only after verifyTwoFactorSetup()
+
+  await this.adminRepository.save(admin);
+
+  // Send OTP setup code to the provided email
+  await this.mailerService.sendMail({
+    to: emailForOtp,
+    subject: 'Your 2FA Setup Code',
+    text: `Your two-factor authentication setup code is ${otpCode}`,
+    html: `<b>Your two-factor authentication setup code is: ${otpCode}</b>`,
+  });
+
+  return { message: '2FA code sent to the provided email' };
+}
+
+
+  async sendTwoFactorCodeEmail(to: string, otpCode: string): Promise<void> {
+    await this.mailerService.sendMail({
+      to,
+      subject: 'Your 2FA Login Code',
+      text: `Your two-factor authentication code is ${otpCode}`,
+      html: `<b>Your two-factor authentication code is: ${otpCode}</b>`,
+    });
+  }
+
+  async verifyTwoFactorSetup(
+    adminId: number,
+    code: string,
+  ): Promise<{ message: string }> {
     const admin = await this.findById(adminId);
-    if (!admin) throw new BadRequestException('Admin not found');
+    if (!admin || !admin.twoFactorOtp || !admin.twoFactorOtpExpiration) {
+      throw new BadRequestException('No pending 2FA setup verification');
+    }
 
-    // Generate 6-digit OTP code
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    if (new Date() > admin.twoFactorOtpExpiration) {
+      throw new BadRequestException('OTP code expired');
+    }
 
-    // Set OTP and expiration (e.g., 10 minutes from now)
-    admin.twoFactorOtp = otpCode;
-    admin.twoFactorOtpExpiration = new Date(Date.now() + 10 * 60 * 1000);
-    admin.isTwoFactorEnabled = true; // mark 2FA enabled
+    if (admin.twoFactorOtp !== code) {
+      throw new BadRequestException('Invalid OTP code');
+    }
+
+    // Clear OTP fields, confirm 2FA enabled
+    admin.twoFactorOtp = undefined;
+    admin.twoFactorOtpExpiration = undefined;
+    admin.isTwoFactorEnabled = true;
 
     await this.adminRepository.save(admin);
 
-    // Send OTP code to the provided email (not necessarily admin.email)
-    await this.mailerService.sendMail({
-      to: emailForOtp,
-      subject: 'Your 2FA Setup Code',
-      text: `Your two-factor authentication setup code is ${otpCode}`,
-      html: `<b>Your two-factor authentication setup code is: ${otpCode}</b>`,
-    });
-
-    return { message: '2FA code sent to the provided email' };
+    return { message: '2FA has been successfully enabled' };
   }
-
-  async sendTwoFactorCodeEmail(to: string, otpCode: string): Promise<void> {
-  await this.mailerService.sendMail({
-    to,
-    subject: 'Your 2FA Login Code',
-    text: `Your two-factor authentication code is ${otpCode}`,
-    html: `<b>Your two-factor authentication code is: ${otpCode}</b>`,
-  });
-}
-
 }
