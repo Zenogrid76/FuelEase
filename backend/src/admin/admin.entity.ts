@@ -1,4 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { OneToMany } from 'typeorm';
+import { FuelStation } from '../fuelstation/fuelstation.entity';
 
 @Entity('admins')
 export class Admin {
@@ -50,4 +52,8 @@ export class Admin {
 
   @Column({ type: 'timestamp', nullable: true })
   twoFactorOtpExpiration?: Date;
+
+  // inside Admin class
+  @OneToMany(() => FuelStation, (station) => station.admin)
+  fuelStations: FuelStation[];
 }

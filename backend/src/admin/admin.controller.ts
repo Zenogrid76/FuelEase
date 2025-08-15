@@ -29,7 +29,7 @@ import { AuthGuard } from '../auth/auth.guard';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  // Create a new admin (only if logged in)
+
   //localhost:3000/admin/create
   //@UseGuards(AuthGuard)
   @Post('create')

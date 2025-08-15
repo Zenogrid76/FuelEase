@@ -8,6 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule } from '@nestjs/config';
 import { TwoFactorAuthModule } from './twofa/twofa.module'; 
+import { FuelStationModule } from './fuelstation/fuelstation.module';
 
 @Module({
   imports: [
@@ -47,7 +48,8 @@ import { TwoFactorAuthModule } from './twofa/twofa.module';
     AdminModule,
     CustomerModule,
     AuthModule,
-    TwoFactorAuthModule, 
+    TwoFactorAuthModule,
+    FuelStationModule, 
   ],
   controllers: [AppController],
   providers: [AppService],
