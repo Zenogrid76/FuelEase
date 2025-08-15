@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { ILike, Repository } from 'typeorm';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository} from 'typeorm';
 import { Customer } from './customer.entity';
 import { CustomerDto } from './dtos/customer.dto';
 
@@ -10,44 +10,41 @@ export class CustomerService {
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
   ) {}
-
-  async createCustomer(createCustomerDto: CustomerDto): Promise<Customer> {
-    const customer = this.customerRepository.create(createCustomerDto);
-    return this.customerRepository.save(customer);
+/*
+  // Signup new customer
+  async signup(customerDto: CustomerDto): Promise<Customer> {
+    // TODO: hash password, validate, save to DB
+    //return null;
   }
 
-  async findByUsername(username: string): Promise<Customer> {
-    const customer = await this.customerRepository.findOneBy({ username });
-    if (!customer) {
-      throw new NotFoundException(
-        `Customer with username ${username} not found`,
-      );
-    }
-    return customer;
+  // Update profile info by customer ID
+  async updateProfile(customerId: number, updateDto: Partial<CustomerDto>): Promise<Customer> {
+    // TODO: find, update fields, save
+    //return null;
   }
 
-  async findByFullNameContains(substring: string): Promise<Customer[]> {
-    return this.customerRepository.find({
-      where: {
-        fullName: ILike(`%${substring}%`),
-      },
-    });
+  // Delete account by customer ID
+  async deleteAccount(customerId: number): Promise<{ deleted: boolean }> {
+    // TODO: delete customer by id
+    return { deleted: false };
   }
 
-  async removeByUsername(username: string): Promise<{ deleted: boolean }> {
-    const result = await this.customerRepository.delete({ username });
-    return { deleted: !!result.affected };
+  // Search stations (stub method)
+  async searchStation(query: string): Promise<any[]> {
+    // TODO: implement searching stations by name/location etc
+    return [];
   }
 
-    // Make isActive true for a given customer id
-  async activateCustomer(id: number): Promise<Customer> {
-    const customer = await this.customerRepository.findOne({ where: { id } });
-
-    if (!customer) {
-      throw new NotFoundException(`Customer with id ${id} not found`);
-    }
-
-    customer.isActive = true; 
-    return this.customerRepository.save(customer);
+  // Pay for fuel or booking
+  async pay(customerId: number, paymentDetails: any): Promise<any> {
+    // TODO: implement payment logic
+    return {};
   }
+
+  // Post a review
+  async postReview(customerId: number, stationId: number, reviewDetails: any): Promise<any> {
+    // TODO: implement review creation
+    return {};
+  }
+    */
 }

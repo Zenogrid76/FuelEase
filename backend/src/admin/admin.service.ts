@@ -5,9 +5,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
-import { Admin } from './admin.entity';
+import { Admin} from './admin.entity';
 import { AdminDto } from './dtos/admin.dto';
-import { QueryFailedError } from 'typeorm/error/QueryFailedError';
 import * as bcrypt from 'bcrypt';
 import { MailerService } from '@nestjs-modules/mailer';
 
@@ -19,17 +18,53 @@ export class AdminService {
     private readonly mailerService: MailerService,
   ) {}
 
+  async createAdmin(
+    adminDto: AdminDto,
+    creatorFullName: string,
+  ): Promise<Admin> {
+    const salt = await bcrypt.genSalt();
+
+
+    // Hash the provided password from adminDto
+    const hash = await bcrypt.hash(adminDto.password, salt);
+
+    const newAdmin = this.adminRepository.create({
+      ...adminDto,
+      password: hash,
+    });
+
+    const savedAdmin = await this.adminRepository.save(newAdmin);
+
+    // Send welcome email (without reset/2FA link)
+    await this.mailerService.sendMail({
+      to: adminDto.email,
+      subject: 'Welcome to Fuelease - Your Admin Account Created',
+      html: `
+      <p>Thank you for joining Fuelease as an Admin.</p>
+      <p>Your account has been created by <b>${creatorFullName}</b>.</p>
+      <p>We hope you enjoy your time here.</p>
+      <p>Your current email: <b>${adminDto.email}</b></p>
+      <p>Your temporary password: <b>${adminDto.password}</b></p>
+      <p>Please change your password on first login if you want.</p>
+    `,
+    });
+
+    return savedAdmin;
+  }
+
+  /*
+
   async createAdmin(adminDto: AdminDto) {
     const saltOrRounds = 10;
     const hash = await bcrypt.hash(adminDto.password, saltOrRounds);
 
     const newAdmin = this.adminRepository.create({
       ...adminDto,
-      password: hash, // store hashed password instead of plain
+      password: hash,
     });
 
     return this.adminRepository.save(newAdmin);
-  }
+  }*/
 
   async updateAdmin(admin: Admin): Promise<Admin> {
     return this.adminRepository.save(admin);
@@ -81,7 +116,7 @@ export class AdminService {
     return this.adminRepository.save(admin);
   }
 
-  // Update admin details
+  // Delete admin account
   async deleteAdmin(id: number): Promise<{ deleted: boolean }> {
     const result = await this.adminRepository.delete({ id });
     return { deleted: !!result.affected };
@@ -91,7 +126,16 @@ export class AdminService {
   async findByEmail(email: string): Promise<Admin> {
     const admin = await this.adminRepository.findOne({
       where: { email },
-      select: ['id', 'email', 'password', 'role','isTwoFactorEnabled', 'twoFactorOtp', 'twoFactorOtpExpiration', 'twoFactorEmail'],
+      select: [
+        'id',
+        'email',
+        'password',
+        'role',
+        'isTwoFactorEnabled',
+        'twoFactorOtp',
+        'twoFactorOtpExpiration',
+        'twoFactorEmail',
+      ],
     });
     if (!admin) {
       throw new NotFoundException('Admin not found');
@@ -108,41 +152,44 @@ export class AdminService {
     return admin;
   }
 
-  
-// Enable two-factor authentication for an admin
-async enableTwoFactor(
-  adminId: number,
-  emailForOtp: string,
-): Promise<{ message: string }> {
-  const admin = await this.findById(adminId);
-  if (!admin) throw new BadRequestException('Admin not found');
+  // Enable two-factor authentication for an admin
+  async enableTwoFactor(
+    adminId: number,
+    emailForOtp: string,
+  ): Promise<{ message: string }> {
+    const admin = await this.findById(adminId);
+    if (!admin) throw new BadRequestException('Admin not found');
 
-  // Save the OTP email in the database
-  admin.twoFactorEmail = emailForOtp;
+    // Save the OTP email in the database
+    admin.twoFactorEmail = emailForOtp;
 
-  // Generate 6-digit OTP code
-  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit OTP code
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Set OTP and expiration (e.g., 10 minutes from now)
-  admin.twoFactorOtp = otpCode;
-  admin.twoFactorOtpExpiration = new Date(Date.now() + 10 * 60 * 1000);
+     // Hash the OTP before storing
+    const salt = await bcrypt.genSalt();
 
-  // Mark 2FA as pending activation (you could keep false until verified)
-  admin.isTwoFactorEnabled = false; // safer to set true only after verifyTwoFactorSetup()
+    const hashedOtp = await bcrypt.hash(otpCode, salt);
 
-  await this.adminRepository.save(admin);
+    admin.twoFactorOtp = hashedOtp;
 
-  // Send OTP setup code to the provided email
-  await this.mailerService.sendMail({
-    to: emailForOtp,
-    subject: 'Your 2FA Setup Code',
-    text: `Your two-factor authentication setup code is ${otpCode}`,
-    html: `<b>Your two-factor authentication setup code is: ${otpCode}</b>`,
-  });
+    admin.twoFactorOtpExpiration = new Date(Date.now() + 10 * 60 * 1000);
 
-  return { message: '2FA code sent to the provided email' };
-}
+    // Mark 2FA as pending activation (you could keep false until verified)
+    admin.isTwoFactorEnabled = false; // safer to set true only after verifyTwoFactorSetup()
 
+    await this.adminRepository.save(admin);
+
+    // Send OTP setup code to the provided email
+    await this.mailerService.sendMail({
+      to: emailForOtp,
+      subject: 'Your 2FA Setup Code',
+      text: `Your two-factor authentication setup code is ${otpCode}`,
+      html: `<b>Your two-factor authentication setup code is: ${otpCode}</b>`,
+    });
+
+    return { message: '2FA code sent to the provided email' };
+  }
 
   async sendTwoFactorCodeEmail(to: string, otpCode: string): Promise<void> {
     await this.mailerService.sendMail({
@@ -166,9 +213,9 @@ async enableTwoFactor(
       throw new BadRequestException('OTP code expired');
     }
 
-    if (admin.twoFactorOtp !== code) {
-      throw new BadRequestException('Invalid OTP code');
-    }
+ if (!(await bcrypt.compare(code, admin.twoFactorOtp))) {
+  throw new BadRequestException('Invalid OTP code');
+}
 
     // Clear OTP fields, confirm 2FA enabled
     admin.twoFactorOtp = undefined;

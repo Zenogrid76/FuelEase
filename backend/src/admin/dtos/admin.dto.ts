@@ -26,7 +26,6 @@ export class AdminDto {
 
   @IsNotEmpty()
   @IsEmail({}, { message: 'Invalid email format' })
-  @Matches(/@.*\.xyz$/, { message: 'Email must contain "@" and end with .xyz' })
   email: string;
 
   @IsNotEmpty()

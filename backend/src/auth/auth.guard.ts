@@ -25,8 +25,6 @@ export class AuthGuard implements CanActivate {
           secret: jwtConstants.secret
         }
       );
-      // 💡 We're assigning the payload to the request object here
-      // so that we can access it in our route handlers
       request['user'] = payload;
     } catch {
       throw new UnauthorizedException();
@@ -37,5 +35,31 @@ export class AuthGuard implements CanActivate {
   private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
+  }
+}
+
+export class AdminGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+    if (!user || user.role !== 'admin') {
+      throw new UnauthorizedException('Admin only endpoint');
+    }
+    return true;
+  }
+}
+
+
+@Injectable()
+export class CustomerGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+    if (!user || user.role !== 'customer') {
+      throw new UnauthorizedException('Access restricted to customers only');
+    }
+
+    return true;
   }
 }
