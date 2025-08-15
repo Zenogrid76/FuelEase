@@ -12,28 +12,28 @@ export class FuelStationController {
   @Post('add')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async addStation(@Request() req, @Body() dto: CreateFuelStationDto) {
-    // Placeholder
     return this.fuelStationService.addStation(req.user.sub, dto);
   }
 
   @Put('update/:id')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async updateStation(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateFuelStationDto) {
-    // Placeholder
     return this.fuelStationService.updateStation(id, dto);
   }
 
   @Delete('remove/:id')
   async removeStation(@Param('id', ParseIntPipe) id: number) {
-    // Placeholder
     return this.fuelStationService.removeStation(id);
   }
 
   @Get('all')
   async viewAllStations(@Request() req) {
-    // Placeholder
-    return this.fuelStationService.viewAllStations(req.user.sub);
+    return this.fuelStationService.viewAllStations();
   }
 
-  
+  @Get('managed')
+  async viewAllManagedStations(@Request() req) {
+
+    return this.fuelStationService.viewAllManagedStations(req.user.sub);
+  }
 }

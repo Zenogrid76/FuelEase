@@ -6,6 +6,8 @@ import {
 import { AdminService } from '../admin/admin.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import * as session from 'express-session';
+
 
 @Injectable()
 export class AuthService {
@@ -14,11 +16,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  /**
-   * Sign in with email/password
-   * If 2FA is enabled, send OTP and return a temporary token for verification
-   */
-  async signIn(email: string, password: string): Promise<any> {
+  async signIn(email: string, password: string, req: any): Promise<any> {
     const admin = await this.adminService.findByEmail(email);
     if (!admin) {
       throw new UnauthorizedException('Invalid credentials');
@@ -29,30 +27,36 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // If 2FA enabled → send OTP & return temp token instead of access token
     if (admin.isTwoFactorEnabled) {
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      admin.twoFactorOtp = otpCode;
-      admin.twoFactorOtpExpiration = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+
+      const salt = await bcrypt.genSalt();
+
+      const hashedOtp = await bcrypt.hash(otpCode, salt);
+
+      admin.twoFactorOtp = hashedOtp;
+      admin.twoFactorOtpExpiration = new Date(Date.now() + 10 * 60 * 1000);
       await this.adminService.updateAdmin(admin);
 
       await this.adminService.sendTwoFactorCodeEmail(
-        admin.twoFactorEmail ?? admin.email, // fallback to account email
+        admin.twoFactorEmail ?? admin.email,
         otpCode,
       );
 
-      const tempPayload = { sub: admin.id, twoFactorStage: true };
-      const tempToken = await this.jwtService.signAsync(tempPayload, {
-        expiresIn: '10m', // expires with OTP
-      });
+      const tempToken = Array.from({ length: 12 }, () =>
+        Math.floor(Math.random() * 10),
+      ).join('');
+
+      req.session.tempToken = tempToken;
+      req.session.adminIdFor2FA = admin.id;
+      req.session.otpExpiration = admin.twoFactorOtpExpiration;
 
       return {
         twoFactorRequired: true,
-        tempToken, // short-lived token for OTP verification
+        tempToken,
         message: '2FA code sent to your email',
       };
-    } else if (!admin.isTwoFactorEnabled) {
-      // Otherwise return normal access token
+    } else {
       const payload = { sub: admin.id, email: admin.email, role: admin.role };
       return {
         access_token: await this.jwtService.signAsync(payload),
@@ -60,58 +64,51 @@ export class AuthService {
     }
   }
 
-  /**
-   * Verify OTP for admins with 2FA enabled
-   * Now uses tempToken from Authorization header instead of asking for adminId
-   */
-  async verifyTwoFactorCodeFromToken(
-    tempToken: string,
+  // New method for verifying the 2FA OTP using session
+  async verifyTwoFactor(
+    req: any,
     code: string,
   ): Promise<{ access_token: string }> {
-    let payload: any;
-    try {
-      payload = await this.jwtService.verifyAsync(tempToken);
-    } catch (err) {
-      throw new UnauthorizedException('Invalid or expired verification token');
+    const { tempToken, adminIdFor2FA, otpExpiration } = req.session;
+
+    if (!tempToken || !adminIdFor2FA) {
+      throw new UnauthorizedException('No pending 2FA session');
     }
 
-    // Make sure this JWT is from the 2FA stage
-    if (!payload.twoFactorStage) {
-      throw new UnauthorizedException('Not a valid 2FA flow token');
-    }
-
-    const admin = await this.adminService.findById(payload.sub);
-    if (!admin || !admin.twoFactorOtp || !admin.twoFactorOtpExpiration) {
-      throw new BadRequestException('No pending 2FA verification');
-    }
-
-    if (new Date() > admin.twoFactorOtpExpiration) {
+    if (new Date() > new Date(otpExpiration)) {
       throw new BadRequestException('OTP expired');
     }
 
-    if (admin.twoFactorOtp !== code) {
+    const admin = await this.adminService.findById(adminIdFor2FA);
+
+    if (!admin || !admin.twoFactorOtp) {
+      throw new BadRequestException('No pending 2FA OTP');
+    }
+
+    if (!(await bcrypt.compare(code, admin.twoFactorOtp))) {
       throw new BadRequestException('Invalid OTP code');
     }
 
-    // Clear OTP on success
+    // Clear OTP and session data after successful verification
     admin.twoFactorOtp = undefined;
     admin.twoFactorOtpExpiration = undefined;
     await this.adminService.updateAdmin(admin);
 
-    // Issue real login token
-    const loginPayload = {
-      sub: admin.id,
-      email: admin.email,
-      role: admin.role,
-    };
+    req.session.tempToken = null;
+    req.session.adminIdFor2FA = null;
+    req.session.otpExpiration = null;
+   
+
+    const payload = { sub: admin.id, email: admin.email, role: admin.role };
     return {
-      access_token: await this.jwtService.signAsync(loginPayload),
+      
+      access_token: await this.jwtService.signAsync(payload),
     };
+    
   }
 
   async decodeToken(token: string): Promise<any> {
     try {
-      // Decode without verifying signature
       const decoded = this.jwtService.decode(token, { json: true });
       if (!decoded) {
         throw new BadRequestException('Invalid JWT token format');

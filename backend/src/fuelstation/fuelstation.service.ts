@@ -1,11 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FuelStation } from './fuelstation.entity';
 import { Repository } from 'typeorm';
 import { CreateFuelStationDto } from './dtos/createfuelstation.dto';
 import { UpdateFuelStationDto } from './dtos/updatefuelstation.dto'; 
-
-
 
 @Injectable()
 export class FuelStationService {
@@ -14,28 +12,55 @@ export class FuelStationService {
     private readonly fuelStationRepo: Repository<FuelStation>
   ) {}
 
-  // Placeholder: Add fuel station
-  async addStation(adminId: number, dto: CreateFuelStationDto) {
-    // implementation here
+  // Add fuel station
+  async addStation(adminId: number, createdto: CreateFuelStationDto): Promise<FuelStation> {
+    const newStation = this.fuelStationRepo.create({
+      ...createdto,
+      adminId,
+    });
+    return this.fuelStationRepo.save(newStation);
   }
 
-  // Placeholder: Update station info
-  async updateStation(stationId: number, dto: UpdateFuelStationDto) {
-    // implementation here
+  // Update station info
+  async updateStation(stationId: number, updatedto: UpdateFuelStationDto): Promise<FuelStation> {
+    const station = await this.fuelStationRepo.findOneBy({ id: stationId });
+    if (!station) throw new NotFoundException('Station not found');
+    Object.assign(station, updatedto);
+    return this.fuelStationRepo.save(station);
   }
 
-  // Placeholder: Remove station
-  async removeStation(stationId: number) {
-    // implementation here
+  // Remove station
+  async removeStation(stationId: number): Promise<{ deleted: boolean }> {
+    const result = await this.fuelStationRepo.delete(stationId);
+    return { deleted: !!result.affected };
   }
 
-  // Placeholder: View all stations managed by admin
-  async viewAllStations(adminId: number) {
-    // implementation here
+  // View all stations managed by a specific admin
+  async viewAllManagedStations(adminId: number): Promise<FuelStation[]> {
+    return this.fuelStationRepo.find({ where: { adminId } });
   }
 
-  // Placeholder: Log action (optionally, if you want to implement logging)
-  async logAction(actionType: string, adminId: number, stationId: number, notes?: string) {
-    // implementation here
-  }
+  /*
+  // View all stations, along with admin info (who manages each station)
+  async viewAllStations(): Promise<FuelStation[]> {
+    return this.fuelStationRepo.find({ relations: ['admin'] }); // Make sure 'admin' relation is set up in your entity
+  }*/
+
+  async viewAllStations(): Promise<any[]> {
+  const stations = await this.fuelStationRepo.find({ relations: ['admin'] });
+
+  return stations.map(station => ({
+    id: station.id,
+    name: station.name,
+    location: station.location,
+    notes: station.notes,
+    createdAt: station.createdAt,
+    admin: {
+      id: station.admin.id,
+      fullName: station.admin.fullName,
+      email: station.admin.email,
+    },
+  }));
+}
+
 }

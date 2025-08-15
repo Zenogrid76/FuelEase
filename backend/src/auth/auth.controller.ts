@@ -24,18 +24,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ValidationPipe({ whitelist: true }))
   @Post('login')
-  signIn(@Body() loginDto: LoginDto) {
-    return this.authService.signIn(loginDto.email, loginDto.password);
+  signIn(@Body() loginDto: LoginDto, @Req() req: Request) {
+    return this.authService.signIn(loginDto.email, loginDto.password, req);
   }
 
   @Post('verify-2fa')
   async verify2FA(@Req() req, @Body('code') code: string) {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader)
-      throw new UnauthorizedException('Missing Authorization header');
-    const tempToken = authHeader.split(' ')[1];
 
-    return this.authService.verifyTwoFactorCodeFromToken(tempToken, code);
+    return this.authService.verifyTwoFactor(req, code);
   }
 
   @Post('decode-token')

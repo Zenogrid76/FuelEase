@@ -17,6 +17,7 @@ import { CustomerDto } from './dtos/customer.dto';
 export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
+  /*
   //localhost:3000/customers/create
   @Post('create')
   @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -48,4 +49,5 @@ export class CustomerController {
   async activateCustomer(@Param('id', ParseIntPipe) id: number) {
     return this.customerService.activateCustomer(id);
   }
+  */
 }
