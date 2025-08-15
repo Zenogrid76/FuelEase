@@ -108,4 +108,17 @@ export class AuthService {
       access_token: await this.jwtService.signAsync(loginPayload),
     };
   }
+
+  async decodeToken(token: string): Promise<any> {
+    try {
+      // Decode without verifying signature
+      const decoded = this.jwtService.decode(token, { json: true });
+      if (!decoded) {
+        throw new BadRequestException('Invalid JWT token format');
+      }
+      return { decoded };
+    } catch (error) {
+      throw new BadRequestException('Failed to decode token');
+    }
+  }
 }

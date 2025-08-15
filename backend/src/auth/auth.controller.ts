@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -27,7 +28,6 @@ export class AuthController {
     return this.authService.signIn(loginDto.email, loginDto.password);
   }
 
-  
   @Post('verify-2fa')
   async verify2FA(@Req() req, @Body('code') code: string) {
     const authHeader = req.headers['authorization'];
@@ -36,5 +36,13 @@ export class AuthController {
     const tempToken = authHeader.split(' ')[1];
 
     return this.authService.verifyTwoFactorCodeFromToken(tempToken, code);
+  }
+
+  @Post('decode-token')
+  async decodeJwtToken(@Body('token') token: string) {
+    if (!token) {
+      throw new BadRequestException('Token must be provided');
+    }
+    return this.authService.decodeToken(token);
   }
 }
