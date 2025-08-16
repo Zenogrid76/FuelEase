@@ -11,7 +11,6 @@ import { Request } from 'express';
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(private jwtService: JwtService) {}
-
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
@@ -19,12 +18,15 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
     try {
-      const payload = await this.jwtService.verifyAsync(
-        token,
-        {
-          secret: jwtConstants.secret
-        }
-      );
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: jwtConstants.secret,
+      });
+      // Reject temp 2FA tokens
+      if (payload.type && payload.type === '2fa_temp') {
+        throw new UnauthorizedException(
+          'Temporary 2FA token cannot access this resource',
+        );
+      }
       request['user'] = payload;
     } catch {
       throw new UnauthorizedException();
@@ -48,7 +50,6 @@ export class AdminGuard implements CanActivate {
     return true;
   }
 }
-
 
 @Injectable()
 export class CustomerGuard implements CanActivate {

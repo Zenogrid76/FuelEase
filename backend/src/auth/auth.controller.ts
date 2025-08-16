@@ -23,15 +23,31 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  @Post('login')
-  signIn(@Body() loginDto: LoginDto, @Req() req: Request) {
-    return this.authService.signIn(loginDto.email, loginDto.password, req);
+  @Post('admin/login')
+  async adminSignIn(@Body() loginDto: LoginDto) {
+    return this.authService.signIn(loginDto.email, loginDto.password);
   }
 
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @Post('customer/login')
+  async customerSignIn(@Body() loginDto: LoginDto) {
+    return this.authService.signInCustomer(loginDto.email, loginDto.password);
+  }
   @Post('verify-2fa')
   async verify2FA(@Req() req, @Body('code') code: string) {
+    const authHeader =
+      req.headers['authorization'] || req.headers['Authorization'];
+    if (!authHeader) {
+      throw new UnauthorizedException('Authorization header missing');
+    }
 
-    return this.authService.verifyTwoFactor(req, code);
+    const [type, token] = authHeader.split(' ');
+    if (type !== 'Bearer' || !token) {
+      throw new UnauthorizedException('Invalid Authorization header format');
+    }
+
+    return this.authService.verifyTwoFactor(token, code);
   }
 
   @Post('decode-token')
