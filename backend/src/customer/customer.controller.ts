@@ -1,53 +1,90 @@
 import {
-  Controller,
-  Post,
   Body,
+  Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  Post,
+  Put,
   Delete,
+  Patch,
+  UseGuards,
   UsePipes,
   ValidationPipe,
-  Patch,
-  ParseIntPipe,
+  UnauthorizedException,
+  BadRequestException,
+  Request,
 } from '@nestjs/common';
 import { CustomerService } from './customer.service';
-import { CustomerDto } from './dtos/customer.dto';
+import { AuthGuard, CustomerGuard } from '../auth/auth.guard';
+import { LoginDto } from '../auth/Dtos/LoginDTO';
 
-@Controller('customers')
+@Controller('customer')
 export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
-  /*
-  //localhost:3000/customers/create
-  @Post('create')
+  @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  async createCustomer(@Body() createCustomerDto: CustomerDto) {
-    return this.customerService.createCustomer(createCustomerDto);
+  @Post('signup')
+  async signup(@Body() customerDto: any) {
+    return this.customerService.signup(customerDto);
   }
 
-  //localhost:3000/customers/username/:username
-  @Get('username/:username')
-  async getCustomerByUsername(@Param('username') username: string) {
-    return this.customerService.findByUsername(username);
+  // Enable 2FA for logged-in customer
+  @UseGuards(AuthGuard, CustomerGuard)
+  @Post('enable-2fa')
+  async enableTwoFactor(
+    @Request() req,
+    @Body('emailForOtp') emailForOtp: string,
+  ) {
+    if (!emailForOtp) {
+      throw new BadRequestException('Email for OTP is required');
+    }
+    const customerId = req.user.sub;
+    const customer = await this.customerService.findById(customerId);
+    if (customer.isTwoFactorEnabled) {
+      throw new BadRequestException(
+        `Two-factor authentication is already enabled with this email 
+        ${customer.twoFactorEmail}`,
+      );
+    }
+
+    return this.customerService.enableTwoFactor(customerId, emailForOtp);
   }
 
-  //localhost:3000/customers/search/:substring
-  @Get('search/:substring')
-  async getCustomersByFullNameSubstring(@Param('substring') substring: string) {
-    return this.customerService.findByFullNameContains(substring);
+  // Verify 2FA setup for logged-in customer
+  @UseGuards(AuthGuard, CustomerGuard)
+  @Post('verify-2fa-setup')
+  async verifyTwoFactorSetup(@Request() req, @Body('code') code: string) {
+    if (!code) {
+      throw new BadRequestException('OTP code is required');
+    }
+    const customerId = req.user.sub;
+    return this.customerService.verifyTwoFactorSetup(customerId, code);
   }
 
-  //localhost:3000/customers/username/:username
-  @Delete('username/:username')
-  async deleteCustomerByUsername(@Param('username') username: string) {
-    return this.customerService.removeByUsername(username);
+  // Get own profile (protected)
+  @UseGuards(AuthGuard, CustomerGuard)
+  @Get('profile')
+  async getProfile(@Request() req) {
+    const customerId = req.user.sub;
+    return this.customerService.findById(customerId);
   }
 
-  
-  // localhost:3000/customers/activate/:id
-  @Patch('activate/:id')
-  async activateCustomer(@Param('id', ParseIntPipe) id: number) {
-    return this.customerService.activateCustomer(id);
+  // Update own profile (protected)
+  @UseGuards(AuthGuard, CustomerGuard)
+  @Put('profile')
+  async updateProfile(@Request() req, @Body() updateDto: Partial<any>) {
+    const customerId = req.user.sub;
+    return this.customerService.updateProfile(customerId, updateDto);
   }
-  */
+
+  // Delete own account (protected)
+  @UseGuards(AuthGuard, CustomerGuard)
+  @Delete('delete')
+  async deleteAccount(@Request() req) {
+    const customerId = req.user.sub;
+    return this.customerService.deleteAccount(customerId);
+  }
 }

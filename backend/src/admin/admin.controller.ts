@@ -23,13 +23,13 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AdminService } from './admin.service';
 import { AdminDto } from './dtos/admin.dto';
-import { AuthGuard , AdminGuard } from '../auth/auth.guard';
+import { AuthGuard, AdminGuard } from '../auth/auth.guard';
 
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Post('create')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async createAdmin(@Body() createAdminDto: AdminDto, @Request() req) {
@@ -38,7 +38,7 @@ export class AdminController {
   }
 
   /*
-  For the first Admin Onl;ty
+  For the first Admin Only
   //localhost:3000/admin/create
   @UseGuards(AuthGuard)
   @Post('create')
@@ -48,10 +48,9 @@ export class AdminController {
   }
 */
 
-
   // Upload/update profile image (own account only)
   //localhost:3000/admin/profile-image
-  @UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Put('profile-image')
   @UseInterceptors(
     FileInterceptor('profileImage', {
@@ -84,7 +83,7 @@ export class AdminController {
 
   // Upload/update NID image (own account only)
   //localhost:3000/admin/nid-image
-  @UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Put('nid-image')
   @UseInterceptors(
     FileInterceptor('nidImage', {
@@ -118,7 +117,7 @@ export class AdminController {
 
   // Delete admin (only your own account)
   //localhost:3000/admin/delete
-  @UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Delete('delete')
   async deleteAdmin(@Request() req: any) {
     const adminId = Number(req.user.sub);
@@ -127,7 +126,7 @@ export class AdminController {
 
   // Get admin profile image (requires login)
   //localhost:3000/admin/profile-image/:id
-  @UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Get('profile-image/:id')
   async getProfileImage(@Param('id', ParseIntPipe) id: number) {
     const admin = await this.adminService.findById(id);
@@ -137,7 +136,7 @@ export class AdminController {
 
   // Change the status of a user (requires login
   //localhost:3000/admin/status/:id)
- @UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Patch('status/:id')
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
@@ -153,7 +152,7 @@ export class AdminController {
 
   // Get all inactive admins (requires login)
   //localhost:3000/admin/inactive
-  @UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Get('inactive')
   async getInactiveAdmins() {
     return this.adminService.findInactiveUsers();
@@ -161,7 +160,7 @@ export class AdminController {
 
   // Get admins older than (requires login)
   //localhost:3000/admin/older-than/:age
-@UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Get('older-than/:age')
   async getAdminsOlderThan(@Param('age') age: string) {
     const ageNum = parseInt(age, 10);
@@ -175,7 +174,7 @@ export class AdminController {
 
   // Enable two-factor authentication (requires login)
   //localhost:3000/admin/enable-2fa
-  @UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Post('enable-2fa')
   async enableTwoFactor(
     @Request() req: any,
@@ -186,11 +185,18 @@ export class AdminController {
     }
 
     const adminId = req.user.sub;
+    const admin = await this.adminService.findById(adminId);
+    if (admin.isTwoFactorEnabled) {
+      throw new BadRequestException(
+        `Two-factor authentication is already enabled with this email ${admin.twoFactorEmail}`,
+      );
+    }
+
     return this.adminService.enableTwoFactor(adminId, emailForOtp);
   }
 
   // Verify two-factor authentication setup (requires login)
-  @UseGuards(AuthGuard ,AdminGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Post('verify-2fa-setup')
   async verifyTwoFactorSetup(@Request() req: any, @Body('code') code: string) {
     const adminId = req.user.sub;

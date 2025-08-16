@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
-import { Admin} from './admin.entity';
+import { Admin } from './admin.entity';
 import { AdminDto } from './dtos/admin.dto';
 import * as bcrypt from 'bcrypt';
 import { MailerService } from '@nestjs-modules/mailer';
@@ -24,7 +24,6 @@ export class AdminService {
   ): Promise<Admin> {
     const salt = await bcrypt.genSalt();
 
-
     // Hash the provided password from adminDto
     const hash = await bcrypt.hash(adminDto.password, salt);
 
@@ -35,7 +34,7 @@ export class AdminService {
 
     const savedAdmin = await this.adminRepository.save(newAdmin);
 
-    // Send welcome email (without reset/2FA link)
+    // Send welcome email
     await this.mailerService.sendMail({
       to: adminDto.email,
       subject: 'Welcome to Fuelease - Your Admin Account Created',
@@ -166,7 +165,7 @@ export class AdminService {
     // Generate 6-digit OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-     // Hash the OTP before storing
+    // Hash the OTP before storing
     const salt = await bcrypt.genSalt();
 
     const hashedOtp = await bcrypt.hash(otpCode, salt);
@@ -213,9 +212,9 @@ export class AdminService {
       throw new BadRequestException('OTP code expired');
     }
 
- if (!(await bcrypt.compare(code, admin.twoFactorOtp))) {
-  throw new BadRequestException('Invalid OTP code');
-}
+    if (!(await bcrypt.compare(code, admin.twoFactorOtp))) {
+      throw new BadRequestException('Invalid OTP code');
+    }
 
     // Clear OTP fields, confirm 2FA enabled
     admin.twoFactorOtp = undefined;
