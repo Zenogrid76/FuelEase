@@ -12,19 +12,17 @@ import {
   UseGuards,
   UsePipes,
   ValidationPipe,
-  UnauthorizedException,
   BadRequestException,
   Request,
 } from '@nestjs/common';
 import { CustomerService } from './customer.service';
 import { AuthGuard, CustomerGuard } from '../auth/auth.guard';
-import { LoginDto } from '../auth/Dtos/LoginDTO';
 
 @Controller('customer')
 export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
-  @HttpCode(HttpStatus.CREATED)
+  // Sign up endpoint for customers
   @UsePipes(new ValidationPipe({ whitelist: true }))
   @Post('signup')
   async signup(@Body() customerDto: any) {
@@ -64,7 +62,7 @@ export class CustomerController {
     return this.customerService.verifyTwoFactorSetup(customerId, code);
   }
 
-  // Get own profile (protected)
+  // Get own profile 
   @UseGuards(AuthGuard, CustomerGuard)
   @Get('profile')
   async getProfile(@Request() req) {
@@ -72,7 +70,7 @@ export class CustomerController {
     return this.customerService.findById(customerId);
   }
 
-  // Update own profile (protected)
+  // Update own profile 
   @UseGuards(AuthGuard, CustomerGuard)
   @Put('profile')
   async updateProfile(@Request() req, @Body() updateDto: Partial<any>) {
@@ -80,7 +78,7 @@ export class CustomerController {
     return this.customerService.updateProfile(customerId, updateDto);
   }
 
-  // Delete own account (protected)
+  // Delete own account 
   @UseGuards(AuthGuard, CustomerGuard)
   @Delete('delete')
   async deleteAccount(@Request() req) {

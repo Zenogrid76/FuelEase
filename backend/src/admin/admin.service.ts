@@ -18,13 +18,37 @@ export class AdminService {
     private readonly mailerService: MailerService,
   ) {}
 
+
+
+
+  // Create a new admin
+  // This method is used by existing admins to create new admins
+  // It hashes the password and sends a welcome email
   async createAdmin(
     adminDto: AdminDto,
     creatorFullName: string,
   ): Promise<Admin> {
+    const existingAdmin = await this.adminRepository.findOne({
+      where: [
+        { email: adminDto.email },
+        { nidNumber: adminDto.nidNumber },
+        { phoneNo: adminDto.phoneNo },
+      ],
+    });
+
+    if (existingAdmin) {
+      if (existingAdmin.email === adminDto.email) {
+        throw new BadRequestException('Email already exists');
+      }
+      if (existingAdmin.nidNumber === adminDto.nidNumber) {
+        throw new BadRequestException('NID number already exists');
+      }
+      if (existingAdmin.phoneNo === adminDto.phoneNo) {
+        throw new BadRequestException('Phone number already exists');
+      }
+    }
     const salt = await bcrypt.genSalt();
 
-    // Hash the provided password from adminDto
     const hash = await bcrypt.hash(adminDto.password, salt);
 
     const newAdmin = this.adminRepository.create({
@@ -34,7 +58,6 @@ export class AdminService {
 
     const savedAdmin = await this.adminRepository.save(newAdmin);
 
-    // Send welcome email
     await this.mailerService.sendMail({
       to: adminDto.email,
       subject: 'Welcome to Fuelease - Your Admin Account Created',
@@ -52,8 +75,29 @@ export class AdminService {
   }
 
   /*
-
+  // Create a new admin without creator info
+  // This method is used for the first admin creation
   async createAdmin(adminDto: AdminDto) {
+   const existingAdmin = await this.adminRepository.findOne({
+    where: [
+      { email: adminDto.email },
+      { nidNumber: adminDto.nidNumber },
+      { phoneNo: adminDto.phoneNo },
+    ],
+  });
+
+  if (existingAdmin) {
+    // Determine which field already exists
+    if (existingAdmin.email === adminDto.email) {
+      throw new BadRequestException('Email already exists');
+    }
+    if (existingAdmin.nidNumber === adminDto.nidNumber) {
+      throw new BadRequestException('NID number already exists');
+    }
+    if (existingAdmin.phoneNo === adminDto.phoneNo) {
+      throw new BadRequestException('Phone number already exists');
+    }
+  }
     const saltOrRounds = 10;
     const hash = await bcrypt.hash(adminDto.password, saltOrRounds);
 
@@ -63,7 +107,8 @@ export class AdminService {
     });
 
     return this.adminRepository.save(newAdmin);
-  }*/
+  }
+    */
 
   async updateAdmin(admin: Admin): Promise<Admin> {
     return this.adminRepository.save(admin);
@@ -98,6 +143,7 @@ export class AdminService {
       },
     });
   }
+
 
   // Update profile image and NID image
   async updateProfileImage(id: number, filePath: string): Promise<Admin> {
@@ -159,27 +205,18 @@ export class AdminService {
     const admin = await this.findById(adminId);
     if (!admin) throw new BadRequestException('Admin not found');
 
-    // Save the OTP email in the database
     admin.twoFactorEmail = emailForOtp;
 
-    // Generate 6-digit OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Hash the OTP before storing
     const salt = await bcrypt.genSalt();
-
     const hashedOtp = await bcrypt.hash(otpCode, salt);
-
     admin.twoFactorOtp = hashedOtp;
-
     admin.twoFactorOtpExpiration = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Mark 2FA as pending activation (you could keep false until verified)
-    admin.isTwoFactorEnabled = false; // safer to set true only after verifyTwoFactorSetup()
+    admin.isTwoFactorEnabled = false;
 
     await this.adminRepository.save(admin);
 
-    // Send OTP setup code to the provided email
     await this.mailerService.sendMail({
       to: emailForOtp,
       subject: 'Your 2FA Setup Code',
@@ -190,6 +227,7 @@ export class AdminService {
     return { message: '2FA code sent to the provided email' };
   }
 
+  //Send the two-factor authentication code via email
   async sendTwoFactorCodeEmail(to: string, otpCode: string): Promise<void> {
     await this.mailerService.sendMail({
       to,
@@ -199,6 +237,9 @@ export class AdminService {
     });
   }
 
+  // Verify two-factor authentication setup
+  // This method checks the OTP code provided by the user
+  // If valid, it enables 2FA for the admin
   async verifyTwoFactorSetup(
     adminId: number,
     code: string,
@@ -216,7 +257,6 @@ export class AdminService {
       throw new BadRequestException('Invalid OTP code');
     }
 
-    // Clear OTP fields, confirm 2FA enabled
     admin.twoFactorOtp = undefined;
     admin.twoFactorOtpExpiration = undefined;
     admin.isTwoFactorEnabled = true;

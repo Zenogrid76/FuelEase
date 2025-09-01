@@ -17,7 +17,7 @@ export class AuthService {
     private readonly customerService: CustomerService,
   ) {}
 
-  // Step 1: Sign in, handle 2FA
+  // Step 1: Admin sign-in
   async signIn(email: string, password: string): Promise<any> {
     const admin = await this.adminService.findByEmail(email);
     if (!admin) {
@@ -30,12 +30,11 @@ export class AuthService {
     }
 
     if (admin.isTwoFactorEnabled) {
-      // Generate OTP
+      
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
       const salt = await bcrypt.genSalt();
       const hashedOtp = await bcrypt.hash(otpCode, salt);
 
-      // Send OTP via email
       await this.adminService.sendTwoFactorCodeEmail(
         admin.twoFactorEmail ?? admin.email,
         otpCode,
@@ -72,7 +71,7 @@ export class AuthService {
     tempToken: string,
     code: string,
   ): Promise<{ access_token: string }> {
-    // Decode/verify temp JWT
+   
     let decoded: any;
     try {
       decoded = await this.jwtService.verifyAsync(tempToken);
@@ -80,7 +79,7 @@ export class AuthService {
       throw new UnauthorizedException('2FA token invalid or expired');
     }
 
-    // Validate OTP
+
     if (!code || !decoded.otpHash) {
       throw new BadRequestException('Missing code or 2FA data');
     }
@@ -90,19 +89,18 @@ export class AuthService {
       throw new BadRequestException('Invalid OTP code');
     }
 
-    // OTP is valid, issue main access token
     const payload = {
       sub: decoded.sub,
       email: decoded.email,
       role: decoded.role,
-      type: 'access', // Normal access token
+      type: 'access', 
     };
     return {
       access_token: await this.jwtService.signAsync(payload),
     };
   }
 
-  // Utility for decoding tokens (optional)
+  // Decode JWT token
   async decodeToken(token: string): Promise<any> {
     try {
       const decoded = this.jwtService.decode(token, { json: true });

@@ -29,6 +29,10 @@ import { AuthGuard, AdminGuard } from '../auth/auth.guard';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+ 
+  //localhost:3000/admin/create
+  // Create a new admin (requires login)
+  // Only accessible to existing admins
   @UseGuards(AuthGuard, AdminGuard)
   @Post('create')
   @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -37,16 +41,17 @@ export class AdminController {
     return this.adminService.createAdmin(createAdminDto, creator.fullName);
   }
 
+
+
   /*
-  For the first Admin Only
+  //For the first Admin Only
   //localhost:3000/admin/create
-  @UseGuards(AuthGuard)
   @Post('create')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async createAdmin(@Body() createAdminDto: AdminDto) {
     return this.adminService.createAdmin(createAdminDto);
   }
-*/
+  */
 
   // Upload/update profile image (own account only)
   //localhost:3000/admin/profile-image
@@ -84,7 +89,7 @@ export class AdminController {
   // Upload/update NID image (own account only)
   //localhost:3000/admin/nid-image
   @UseGuards(AuthGuard, AdminGuard)
-  @Put('nid-image')
+  @Patch('nid-image')
   @UseInterceptors(
     FileInterceptor('nidImage', {
       storage: diskStorage({

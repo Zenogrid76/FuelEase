@@ -21,7 +21,8 @@ export class AuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: jwtConstants.secret,
       });
-      // Reject temp 2FA tokens
+
+      
       if (payload.type && payload.type === '2fa_temp') {
         throw new UnauthorizedException(
           'Temporary 2FA token cannot access this resource',
@@ -51,7 +52,6 @@ export class AdminGuard implements CanActivate {
   }
 }
 
-@Injectable()
 export class CustomerGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();

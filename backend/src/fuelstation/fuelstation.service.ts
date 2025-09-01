@@ -40,12 +40,6 @@ export class FuelStationService {
     return this.fuelStationRepo.find({ where: { adminId } });
   }
 
-  /*
-  // View all stations, along with admin info (who manages each station)
-  async viewAllStations(): Promise<FuelStation[]> {
-    return this.fuelStationRepo.find({ relations: ['admin'] }); // Make sure 'admin' relation is set up in your entity
-  }*/
-
   async viewAllStations(): Promise<any[]> {
   const stations = await this.fuelStationRepo.find({ relations: ['admin'] });
 
