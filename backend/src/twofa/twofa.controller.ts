@@ -4,5 +4,4 @@ import { TwoFactorAuthService } from './twofa.service';
 @Controller('twofactor')
 export class TwoFactorAuthController {
 
-
 }

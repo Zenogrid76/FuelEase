@@ -2,18 +2,14 @@ import {
   BadRequestException,
   Body,
   Controller,
-  Get,
   HttpCode,
   HttpStatus,
   Post,
-  Req,
   Request,
   UnauthorizedException,
-  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { LoginDto } from './Dtos/LoginDTO';
 
@@ -21,21 +17,27 @@ import { LoginDto } from './Dtos/LoginDTO';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @HttpCode(HttpStatus.OK)
+  // Sign in endpoint for admins
+  @HttpCode(HttpStatus.OK) // HTTP 200 OK response
   @UsePipes(new ValidationPipe({ whitelist: true }))
   @Post('admin/login')
   async adminSignIn(@Body() loginDto: LoginDto) {
     return this.authService.signIn(loginDto.email, loginDto.password);
   }
 
-  @HttpCode(HttpStatus.OK)
+
+  // Sign in endpoint for customers
+  @HttpCode(HttpStatus.OK) // HTTP 200 OK response
   @UsePipes(new ValidationPipe({ whitelist: true }))
   @Post('customer/login')
   async customerSignIn(@Body() loginDto: LoginDto) {
     return this.authService.signInCustomer(loginDto.email, loginDto.password);
   }
+
+
+  // Verify two-factor authentication
   @Post('verify-2fa')
-  async verify2FA(@Req() req, @Body('code') code: string) {
+  async verify2FA(@Request() req, @Body('code') code: string) {
     const authHeader =
       req.headers['authorization'] || req.headers['Authorization'];
     if (!authHeader) {
@@ -50,6 +52,8 @@ export class AuthController {
     return this.authService.verifyTwoFactor(token, code);
   }
 
+
+  // Decode JWT token
   @Post('decode-token')
   async decodeJwtToken(@Body('token') token: string) {
     if (!token) {
