@@ -20,7 +20,7 @@ export class AdminService {
 
 
 
-
+/*
   // Create a new admin
   // This method is used by existing admins to create new admins
   // It hashes the password and sends a welcome email
@@ -73,8 +73,8 @@ export class AdminService {
 
     return savedAdmin;
   }
-
-  /*
+*/
+  
   // Create a new admin without creator info
   // This method is used for the first admin creation
   async createAdmin(adminDto: AdminDto) {
@@ -108,7 +108,7 @@ export class AdminService {
 
     return this.adminRepository.save(newAdmin);
   }
-    */
+    
 
   async updateAdmin(admin: Admin): Promise<Admin> {
     return this.adminRepository.save(admin);
@@ -197,6 +197,7 @@ export class AdminService {
     return admin;
   }
 
+  
   // Enable two-factor authentication for an admin
   async enableTwoFactor(
     adminId: number,

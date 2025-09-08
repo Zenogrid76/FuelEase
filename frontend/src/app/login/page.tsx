@@ -1,13 +1,13 @@
-'use client' ;
+'use client';
 import { useState } from 'react';
+import axios from 'axios';
+
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 export default function Login() {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -19,23 +19,51 @@ export default function Login() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setSubmitError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      alert('Login successful');
-      //take me to home page
-      window.location.href = '/';
-      
+    if (!validate()) return;
+
+    try {
+      interface LoginResponse {
+        access_token?: string;
+        twoFactorRequired?: boolean;
+        [key: string]: any;
+      }
+
+      const response = await axios.post<LoginResponse>(
+        `${backendUrl}/auth/admin/login`,
+        {
+          email: formData.email,
+          password: formData.password,
+        }
+      );
+
+      const { access_token, twoFactorRequired } = response.data;
+
+      if (access_token) {
+        localStorage.setItem('jwtToken', access_token);
+        window.location.href = '/admin-dashboard';
+      } else if (twoFactorRequired) {
+        alert('Two-factor authentication required.');
+        // Handle 2FA here if needed
+      } else {
+        setSubmitError('Invalid login response from server.');
+      }
+    } catch (error: any) {
+      setSubmitError(
+        error.response?.data?.message || error.message || 'Login failed.'
+      );
     }
   };
 
-  const errorMessage = Object.values(errors)[0] || '';
+  const errorMessage = Object.values(errors)[0] || submitError || '';
 
   return (
-    <div className='max-w-md mx-auto p-6 flex flex-col items-center'>
-      <h1 className='text-4xl text-cyan-700 mb-6'>Login</h1>
+    <div className="max-w-md mx-auto p-6 flex flex-col items-center">
+      <h1 className="text-4xl text-cyan-700 mb-6">Login</h1>
       <form onSubmit={handleSubmit} noValidate className="w-full">
         <div className="mb-4">
           <label className="block mb-1 font-semibold">Email:</label>
