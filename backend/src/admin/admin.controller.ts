@@ -29,7 +29,7 @@ import { AuthGuard, AdminGuard } from '../auth/auth.guard';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
- 
+ /*
   //localhost:3000/admin/create
   // Create a new admin (requires login)
   // Only accessible to existing admins
@@ -40,10 +40,10 @@ export class AdminController {
     const creator = await this.adminService.findById(req.user.sub);
     return this.adminService.createAdmin(createAdminDto, creator.fullName);
   }
+*/
 
 
-
-  /*
+  
   //For the first Admin Only
   //localhost:3000/admin/create
   @Post('create')
@@ -51,7 +51,7 @@ export class AdminController {
   async createAdmin(@Body() createAdminDto: AdminDto) {
     return this.adminService.createAdmin(createAdminDto);
   }
-  */
+  
 
   // Upload/update profile image (own account only)
   //localhost:3000/admin/profile-image
@@ -210,4 +210,19 @@ export class AdminController {
     }
     return this.adminService.verifyTwoFactorSetup(adminId, code);
   }
+
+
+  // Get own admin profile (requires login)
+  //localhost:3000/admin/profile
+@UseGuards(AuthGuard, AdminGuard)
+@Get('profile')
+async getProfile(@Request() req) {
+  const adminId = req.user.sub; // assuming JWT payload includes sub as admin ID
+  const admin = await this.adminService.findById(adminId);
+  if (!admin) {
+    throw new BadRequestException('Admin not found');
+  }
+  return admin;
+}
+
 }

@@ -23,6 +23,7 @@ export class AuthController {
   @Post('admin/login')
   async adminSignIn(@Body() loginDto: LoginDto) {
     return this.authService.signIn(loginDto.email, loginDto.password);
+    
   }
 
 

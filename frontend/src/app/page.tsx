@@ -1,7 +1,9 @@
 import Link from 'next/link';
 
 export default function Home() {
+  
   return (
+    
     <div className='min-h-screen flex flex-col items-center justify-center'>
       <div className='home text-6xl items-center justify-center flex flex-col'>
         <h1>THIS IS THE HOMEPAGE</h1>
