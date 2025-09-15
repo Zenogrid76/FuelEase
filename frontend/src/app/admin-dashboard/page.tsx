@@ -182,7 +182,7 @@ export default function AdminDashboard() {
                       htmlFor="filterAge"
                       className="select-none cursor-pointer"
                     >
-                      Age older than:
+                      Age older than?:
                     </label>
                     <input
                       id="filterAge"
