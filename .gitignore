@@ -1,69 +1,53 @@
 # ---------------------------------------------------------
-# Global ignores for both frontend and backend
+# Node modules (frontend and backend)
 # ---------------------------------------------------------
-
-# Dependencies
 node_modules/
+frontend/node_modules/
+backend/node_modules/
 
+# ---------------------------------------------------------
+# Build / dist / cache folders
+# ---------------------------------------------------------
+frontend/.next/
+frontend/build/
+backend/dist/
+backend/build/
+.cache/
+
+# ---------------------------------------------------------
+# Environment files
+# ---------------------------------------------------------
+*.env
+*.env.local
+*.env.development
+*.env.production
+*.env.test
+
+# ---------------------------------------------------------
 # Logs
+# ---------------------------------------------------------
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-# OS
+# ---------------------------------------------------------
+# OS-specific files
+# ---------------------------------------------------------
 .DS_Store
+Thumbs.db
 
-# Environment variables
-.env
-.env.*.local
-.env.local
-
-# Coverage and test output
-coverage/
-.nyc_output/
-
-# Build output
-build/
-dist/
-out/
-.next/
-
-# Temporary files
-temp/
-tmp/
-*.pid
-*.seed
-*.pid.lock
-*.tsbuildinfo
-
-# Vercel
-.vercel
-
-# VSCode / JetBrains IDE configs
+# ---------------------------------------------------------
+# IDE / Editor specific
+# ---------------------------------------------------------
 .vscode/
 .idea/
-*.sublime-workspace
-.project
-.classpath
-.settings/
-.c9/
-*.launch
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
 # ---------------------------------------------------------
-# Frontend-specific
+# Optional: ignore coverage reports
 # ---------------------------------------------------------
-
-# Ignore everything in frontend (optional – uncomment if you want)
-/frontend/*
-!/frontend/.gitignore  # Keep .gitignore so rules apply
-
-# ---------------------------------------------------------
-# Backend-specific
-# ---------------------------------------------------------
-
-# Ignore everything in backend (optional – uncomment if you want)
-/backend/*
-!/backend/.gitignore  # Keep .gitignore so rules apply
+coverage/
