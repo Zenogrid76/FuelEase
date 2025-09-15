@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "js-cookie": "^3.0.5",
+    "next-cookie": "^2.8.0"
+  }
+}

@@ -24,6 +24,8 @@ import { extname } from 'path';
 import { AdminService } from './admin.service';
 import { AdminDto } from './dtos/admin.dto';
 import { AuthGuard, AdminGuard } from '../auth/auth.guard';
+import { PartialType } from '@nestjs/mapped-types';
+class UpdateAdminDto extends PartialType(AdminDto) {}
 
 @Controller('admin')
 export class AdminController {
@@ -129,16 +131,30 @@ export class AdminController {
     return this.adminService.deleteAdmin(adminId);
   }
 
-  // Get admin profile image (requires login)
-  //localhost:3000/admin/profile-image/:id
-  @UseGuards(AuthGuard, AdminGuard)
-  @Get('profile-image/:id')
-  async getProfileImage(@Param('id', ParseIntPipe) id: number) {
-    const admin = await this.adminService.findById(id);
-    if (!admin) throw new BadRequestException('Admin not found');
-    return { profileImage: admin.profileImage };
+@UseGuards(AuthGuard, AdminGuard)
+@Get('profile-image/:id')
+async getProfileImage(@Param('id', ParseIntPipe) id: number) {
+  const admin = await this.adminService.findById(id);
+  if (!admin) throw new BadRequestException('Admin not found');
+
+  if (!admin.profileImage) {
+    return { profileImage: null };
   }
 
+  // Normalize to use forward slashes and ensure leading slash
+  let formattedPath = admin.profileImage.replace(/\\/g, '/');
+  if (!formattedPath.startsWith('/')) {
+    formattedPath = '/' + formattedPath;
+  }
+
+  // Assuming backend serves static files under /uploads
+  // If profileImage doesn't already include '/uploads', prepend it
+  if (!formattedPath.startsWith('/uploads')) {
+    formattedPath = '/uploads/' + formattedPath.replace(/^\/+/, '');
+  }
+
+  return { profileImage: formattedPath };
+}
   // Change the status of a user (requires login
   //localhost:3000/admin/status/:id)
   @UseGuards(AuthGuard, AdminGuard)
@@ -224,5 +240,32 @@ async getProfile(@Request() req) {
   }
   return admin;
 }
+
+@Get('all')
+@UseGuards(AuthGuard, AdminGuard)
+async getAllAdmins() {
+ 
+ return this.adminService.getAllAdmins();
+}
+
+@Get('profile/:id')
+@UseGuards(AuthGuard, AdminGuard)
+async getAdminProfile(@Param('id', ParseIntPipe) id: number) {
+  const admin = await this.adminService.findById(id);
+  if (!admin) {
+    throw new BadRequestException('Admin not found');
+  }
+  return admin;
+}
+
+
+
+@Put('update-profile')
+@UseGuards(AuthGuard)
+@UsePipes(new ValidationPipe({ whitelist: true }))
+async updateProfile(@Request() req, @Body() updateData: UpdateAdminDto) {
+  return this.adminService.updateProfile(req.user.sub, updateData);
+}
+
 
 }

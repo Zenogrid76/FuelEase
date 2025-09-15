@@ -11,27 +11,34 @@ import { Request } from 'express';
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(private jwtService: JwtService) {}
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const token = this.extractTokenFromHeader(request);
+    const request = context.switchToHttp().getRequest<Request>();
+
+    // Look for token in cookie first, then Authorization header
+    const token =
+      request.cookies?.jwt || this.extractTokenFromHeader(request);
+
     if (!token) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('No token provided');
     }
+
     try {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: jwtConstants.secret,
       });
 
-      
       if (payload.type && payload.type === '2fa_temp') {
         throw new UnauthorizedException(
           'Temporary 2FA token cannot access this resource',
         );
       }
+
       request['user'] = payload;
-    } catch {
-      throw new UnauthorizedException();
+    } catch (e) {
+      throw new UnauthorizedException('Invalid or expired token');
     }
+
     return true;
   }
 

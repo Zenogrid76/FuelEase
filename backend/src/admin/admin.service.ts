@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Inject
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
@@ -17,10 +18,9 @@ export class AdminService {
     private readonly adminRepository: Repository<Admin>,
     private readonly mailerService: MailerService,
   ) {}
+  
 
-
-
-/*
+  /*
   // Create a new admin
   // This method is used by existing admins to create new admins
   // It hashes the password and sends a welcome email
@@ -74,45 +74,46 @@ export class AdminService {
     return savedAdmin;
   }
 */
-  
-  // Create a new admin without creator info
-  // This method is used for the first admin creation
-  async createAdmin(adminDto: AdminDto) {
-   const existingAdmin = await this.adminRepository.findOne({
-    where: [
-      { email: adminDto.email },
-      { nidNumber: adminDto.nidNumber },
-      { phoneNo: adminDto.phoneNo },
-    ],
-  });
 
-  if (existingAdmin) {
-    // Determine which field already exists
-    if (existingAdmin.email === adminDto.email) {
-      throw new BadRequestException('Email already exists');
+  // Create a new admin without creator info
+  async createAdmin(adminDto: AdminDto): Promise<Admin> {
+    // Check for existing admin conflicts
+    const existingAdmin = await this.adminRepository.findOne({
+      where: [
+        { email: adminDto.email },
+        { nidNumber: adminDto.nidNumber },
+        { phoneNo: adminDto.phoneNo },
+      ],
+    });
+
+    if (existingAdmin) {
+      if (existingAdmin.email === adminDto.email) {
+        throw new BadRequestException('Email already exists');
+      }
+      if (existingAdmin.nidNumber === adminDto.nidNumber) {
+        throw new BadRequestException('NID number already exists');
+      }
+      if (existingAdmin.phoneNo === adminDto.phoneNo) {
+        throw new BadRequestException('Phone number already exists');
+      }
     }
-    if (existingAdmin.nidNumber === adminDto.nidNumber) {
-      throw new BadRequestException('NID number already exists');
-    }
-    if (existingAdmin.phoneNo === adminDto.phoneNo) {
-      throw new BadRequestException('Phone number already exists');
-    }
-  }
+
+    // Hash the password before saving
     const saltOrRounds = 10;
     const hash = await bcrypt.hash(adminDto.password, saltOrRounds);
 
+    // Create new admin entity
     const newAdmin = this.adminRepository.create({
       ...adminDto,
       password: hash,
     });
 
-    return this.adminRepository.save(newAdmin);
-  }
-    
 
-  async updateAdmin(admin: Admin): Promise<Admin> {
-    return this.adminRepository.save(admin);
+    const savedAdmin = await this.adminRepository.save(newAdmin);
+ 
+    return savedAdmin;
   }
+
 
   // Change the status of a user
   async updateStatus(
@@ -143,7 +144,6 @@ export class AdminService {
       },
     });
   }
-
 
   // Update profile image and NID image
   async updateProfileImage(id: number, filePath: string): Promise<Admin> {
@@ -197,7 +197,6 @@ export class AdminService {
     return admin;
   }
 
-  
   // Enable two-factor authentication for an admin
   async enableTwoFactor(
     adminId: number,
@@ -265,5 +264,40 @@ export class AdminService {
     await this.adminRepository.save(admin);
 
     return { message: '2FA has been successfully enabled' };
+  }
+
+  async getAllAdmins(): Promise<Partial<Admin>[]> {
+    return this.adminRepository.find({
+      select: [
+        'id',
+        'email',
+        'role',
+        'status',
+        'profileImage',
+        'phoneNo',
+        'fullName',
+        'age',
+      ], // Include fields you want
+    });
+  }
+
+  async updateProfile(id: number, updateData: Partial<Admin>): Promise<Admin> {
+    const admin = await this.findById(id);
+    if (!admin) {
+      throw new NotFoundException('Admin not found');
+    }
+
+    if (updateData.email && updateData.email !== admin.email) {
+      const existingEmailAdmin = await this.adminRepository.findOne({
+        where: { email: updateData.email },
+      });
+      if (existingEmailAdmin) {
+        throw new BadRequestException('Email already exists');
+      }
+    }
+
+    Object.assign(admin, updateData);
+
+    return this.adminRepository.save(admin);
   }
 }

@@ -3,9 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FuelStation } from './fuelstation.entity';
 import { FuelStationService } from './fuelstation.service';
 import { FuelStationController } from './fuelstation.controller';
+import { PusherModule } from 'src/pusher/pusher.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FuelStation])],
+  imports: [TypeOrmModule.forFeature([FuelStation]),PusherModule],
   providers: [FuelStationService],
   controllers: [FuelStationController],
   exports: [FuelStationService]
