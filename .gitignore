@@ -1,1 +1,69 @@
+# ---------------------------------------------------------
+# Global ignores for both frontend and backend
+# ---------------------------------------------------------
+
+# Dependencies
 node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Environment variables
+.env
+.env.*.local
+.env.local
+
+# Coverage and test output
+coverage/
+.nyc_output/
+
+# Build output
+build/
+dist/
+out/
+.next/
+
+# Temporary files
+temp/
+tmp/
+*.pid
+*.seed
+*.pid.lock
+*.tsbuildinfo
+
+# Vercel
+.vercel
+
+# VSCode / JetBrains IDE configs
+.vscode/
+.idea/
+*.sublime-workspace
+.project
+.classpath
+.settings/
+.c9/
+*.launch
+
+# ---------------------------------------------------------
+# Frontend-specific
+# ---------------------------------------------------------
+
+# Ignore everything in frontend (optional – uncomment if you want)
+/frontend/*
+!/frontend/.gitignore  # Keep .gitignore so rules apply
+
+# ---------------------------------------------------------
+# Backend-specific
+# ---------------------------------------------------------
+
+# Ignore everything in backend (optional – uncomment if you want)
+/backend/*
+!/backend/.gitignore  # Keep .gitignore so rules apply
