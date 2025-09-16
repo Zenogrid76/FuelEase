@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
+import { OperatorModule } from './operator/operator.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AdminModule } from './admin/admin.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { FuelStationModule } from './fuelstation/fuelstation.module';
+import { AuthModule } from './auth/auth.module';
+
 
 @Module({
   imports: [ TypeOrmModule.forRoot({
@@ -10,13 +13,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     host: 'localhost',
     port: 5432,
     username: 'postgres',
-    password: 'password',
-    database: 'FuelEase',
+    password: '12345',
+    database: 'fuelease',
      synchronize: true,
       autoLoadEntities: true,}),
-    AdminModule],
+    OperatorModule,
+  FuelStationModule, AuthModule],
   controllers: [AppController],
   providers: [AppService],
 })
+
 
 export class AppModule {}
